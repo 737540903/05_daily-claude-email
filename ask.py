@@ -10,6 +10,11 @@ import sys
 TW_TZ = timezone(timedelta(hours=8))
 
 
+def _clean(s: str) -> str:
+    """去除前後空白與隱形字元(BOM/零寬字元)，避免汙染金鑰或信箱地址。"""
+    return s.replace("﻿", "").replace("​", "").strip()
+
+
 def today_tw() -> str:
     return datetime.now(TW_TZ).strftime("%Y-%m-%d")
 
@@ -90,10 +95,10 @@ def main() -> int:
     claude_bin = os.environ.get("CLAUDE_BIN", "claude")
     model = os.environ.get("CLAUDE_MODEL", "sonnet")
 
-    # 防呆：Secret 若夾帶前後空白/換行會造成 401 Invalid bearer token
+    # 防呆：Secret 若夾帶前後空白/換行/隱形字元(BOM)會造成認證或收件失敗
     tok = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
-    if tok and tok != tok.strip():
-        os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = tok.strip()
+    if tok and _clean(tok) != tok:
+        os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = _clean(tok)
 
     date_str = today_tw()
     if already_sent(log_dir, date_str):
@@ -106,10 +111,10 @@ def main() -> int:
                 for q in questions]
 
     subject, body = compose_email(qa_pairs, date_str)
-    smtp_user = os.environ["GMAIL_ADDRESS"].strip()
+    smtp_user = _clean(os.environ["GMAIL_ADDRESS"])
     # Gmail 應用程式密碼常以 4 組 4 碼顯示（含空白），SMTP 需去除空白
-    smtp_password = os.environ["GMAIL_APP_PASSWORD"].replace(" ", "").strip()
-    mail_to = os.environ.get("MAIL_TO", smtp_user).strip()
+    smtp_password = _clean(os.environ["GMAIL_APP_PASSWORD"]).replace(" ", "")
+    mail_to = _clean(os.environ.get("MAIL_TO", smtp_user))
     with_retries(lambda: send_email(subject, body, smtp_user, smtp_password, mail_to))
 
     write_log(log_dir, date_str, qa_pairs)
