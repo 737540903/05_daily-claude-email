@@ -78,7 +78,9 @@ def ask_claude(question: str, claude_bin: str = "claude",
     )
     out = (proc.stdout or "").strip()
     if proc.returncode != 0 or not out:
-        raise RuntimeError(f"claude 失敗 rc={proc.returncode} stderr={proc.stderr!r}")
+        err = (proc.stderr or "").strip()
+        raise RuntimeError(
+            f"claude 失敗 rc={proc.returncode} stdout={out!r} stderr={err!r}")
     return out
 
 
