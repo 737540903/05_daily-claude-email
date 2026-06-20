@@ -1,0 +1,47 @@
+name: daily-ask
+
+on:
+  schedule:
+    - cron: "0 22 * * *"   # 台灣 06:00
+    - cron: "10 22 * * *"  # 台灣 06:10 補觸發
+  workflow_dispatch: {}
+
+concurrency:
+  group: daily-ask
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  ask:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run daily ask
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: python ask.py
+
+      - name: Commit log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add log/
+          git diff --staged --quiet || git commit -m "log: 每日問答記錄 [skip ci]"
+          git push
