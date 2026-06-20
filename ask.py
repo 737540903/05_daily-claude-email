@@ -2,6 +2,8 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import subprocess
 import time
+import smtplib
+from email.message import EmailMessage
 
 TW_TZ = timezone(timedelta(hours=8))
 
@@ -47,6 +49,18 @@ def write_log(log_dir: Path, date_str: str,
     text = f"# {date_str} 每日 Claude 問答\n\n" + "\n\n".join(blocks) + "\n"
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def send_email(subject: str, body: str, smtp_user: str,
+               smtp_password: str, mail_to: str) -> None:
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = smtp_user
+    msg["To"] = mail_to
+    msg.set_content(body)
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=60) as smtp:
+        smtp.login(smtp_user, smtp_password)
+        smtp.send_message(msg)
 
 
 def ask_claude(question: str, claude_bin: str = "claude",

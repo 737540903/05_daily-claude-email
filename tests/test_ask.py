@@ -90,3 +90,39 @@ def test_write_log_creates_file_with_content(tmp_path):
     text = p.read_text(encoding="utf-8")
     assert "2026-06-20" in text
     assert "今天天氣" in text and "多雲" in text
+
+
+class _FakeSMTP:
+    instances = []
+
+    def __init__(self, host, port, timeout=None):
+        self.host = host
+        self.port = port
+        self.logged_in = None
+        self.sent = None
+        _FakeSMTP.instances.append(self)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def login(self, user, pw):
+        self.logged_in = (user, pw)
+
+    def send_message(self, msg):
+        self.sent = msg
+
+
+def test_send_email_logs_in_and_sends(monkeypatch):
+    _FakeSMTP.instances.clear()
+    monkeypatch.setattr(ask.smtplib, "SMTP_SSL", _FakeSMTP)
+    ask.send_email("主旨", "內文", "me@gmail.com", "app-pw", "to@gmail.com")
+    smtp = _FakeSMTP.instances[-1]
+    assert smtp.host == "smtp.gmail.com" and smtp.port == 465
+    assert smtp.logged_in == ("me@gmail.com", "app-pw")
+    assert smtp.sent["Subject"] == "主旨"
+    assert smtp.sent["To"] == "to@gmail.com"
+    assert smtp.sent["From"] == "me@gmail.com"
+    assert smtp.sent.get_content().strip() == "內文"
