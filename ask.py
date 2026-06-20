@@ -1,5 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+import subprocess
+import time
 
 TW_TZ = timezone(timedelta(hours=8))
 
@@ -15,3 +17,32 @@ def already_sent(log_dir: Path, date_str: str) -> bool:
 def read_questions(path: Path) -> list[str]:
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     return [s.strip() for s in lines if s.strip()]
+
+
+def with_retries(fn, attempts: int = 3, delay: float = 5.0):
+    last = None
+    for i in range(attempts):
+        try:
+            return fn()
+        except Exception as e:  # noqa: BLE001 — 重試所有暫時性錯誤
+            last = e
+            if i < attempts - 1 and delay:
+                time.sleep(delay)
+    raise last
+
+
+def ask_claude(question: str, claude_bin: str = "claude",
+               model: str = "sonnet", timeout: int = 180) -> str:
+    proc = subprocess.run(
+        [claude_bin, "-p", "--model", model,
+         "--allowedTools", "WebSearch WebFetch"],
+        input=question,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=timeout,
+    )
+    out = (proc.stdout or "").strip()
+    if proc.returncode != 0 or not out:
+        raise RuntimeError(f"claude 失敗 rc={proc.returncode} stderr={proc.stderr!r}")
+    return out
