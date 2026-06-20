@@ -4,6 +4,8 @@ import subprocess
 import time
 import smtplib
 from email.message import EmailMessage
+import os
+import sys
 
 TW_TZ = timezone(timedelta(hours=8))
 
@@ -78,3 +80,34 @@ def ask_claude(question: str, claude_bin: str = "claude",
     if proc.returncode != 0 or not out:
         raise RuntimeError(f"claude 失敗 rc={proc.returncode} stderr={proc.stderr!r}")
     return out
+
+
+def main() -> int:
+    log_dir = Path(os.environ.get("LOG_DIR", "log"))
+    questions_file = Path(os.environ.get("QUESTIONS_FILE", "questions.txt"))
+    claude_bin = os.environ.get("CLAUDE_BIN", "claude")
+    model = os.environ.get("CLAUDE_MODEL", "sonnet")
+
+    date_str = today_tw()
+    if already_sent(log_dir, date_str):
+        print(f"[skip] {date_str} 已寄過，跳過")
+        return 0
+
+    questions = read_questions(questions_file)
+    qa_pairs = [(q, with_retries(lambda q=q: ask_claude(q, claude_bin=claude_bin,
+                                                         model=model)))
+                for q in questions]
+
+    subject, body = compose_email(qa_pairs, date_str)
+    smtp_user = os.environ["GMAIL_ADDRESS"]
+    smtp_password = os.environ["GMAIL_APP_PASSWORD"]
+    mail_to = os.environ.get("MAIL_TO", smtp_user)
+    with_retries(lambda: send_email(subject, body, smtp_user, smtp_password, mail_to))
+
+    write_log(log_dir, date_str, qa_pairs)
+    print(f"[done] {date_str} 已寄出並記錄")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

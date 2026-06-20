@@ -126,3 +126,36 @@ def test_send_email_logs_in_and_sends(monkeypatch):
     assert smtp.sent["To"] == "to@gmail.com"
     assert smtp.sent["From"] == "me@gmail.com"
     assert smtp.sent.get_content().strip() == "內文"
+
+
+def test_main_skips_when_already_sent(tmp_path, monkeypatch):
+    (tmp_path / "log").mkdir()
+    (tmp_path / "log" / f"{ask.today_tw()}.md").write_text("x", encoding="utf-8")
+    (tmp_path / "questions.txt").write_text("Q1\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LOG_DIR", "log")
+    monkeypatch.setenv("QUESTIONS_FILE", "questions.txt")
+    sent = {"called": False}
+    monkeypatch.setattr(ask, "send_email",
+                        lambda *a, **k: sent.__setitem__("called", True))
+    assert ask.main() == 0
+    assert sent["called"] is False
+
+
+def test_main_asks_sends_and_logs(tmp_path, monkeypatch):
+    (tmp_path / "questions.txt").write_text("今天天氣\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LOG_DIR", "log")
+    monkeypatch.setenv("QUESTIONS_FILE", "questions.txt")
+    monkeypatch.setenv("GMAIL_ADDRESS", "me@gmail.com")
+    monkeypatch.setenv("GMAIL_APP_PASSWORD", "pw")
+    monkeypatch.setenv("MAIL_TO", "to@gmail.com")
+    monkeypatch.setattr(ask, "ask_claude", lambda q, **k: f"答:{q}")
+    captured = {}
+    monkeypatch.setattr(ask, "send_email",
+                        lambda subj, body, u, p, to: captured.update(
+                            subj=subj, body=body, to=to))
+    assert ask.main() == 0
+    assert "答:今天天氣" in captured["body"]
+    assert captured["to"] == "to@gmail.com"
+    assert (tmp_path / "log" / f"{ask.today_tw()}.md").exists()
