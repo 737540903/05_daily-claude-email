@@ -90,6 +90,11 @@ def main() -> int:
     claude_bin = os.environ.get("CLAUDE_BIN", "claude")
     model = os.environ.get("CLAUDE_MODEL", "sonnet")
 
+    # 防呆：Secret 若夾帶前後空白/換行會造成 401 Invalid bearer token
+    tok = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+    if tok and tok != tok.strip():
+        os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = tok.strip()
+
     date_str = today_tw()
     if already_sent(log_dir, date_str):
         print(f"[skip] {date_str} 已寄過，跳過")
