@@ -74,3 +74,19 @@ def test_ask_claude_raises_on_nonzero(monkeypatch):
     monkeypatch.setattr(ask.subprocess, "run", fake_run)
     with pytest.raises(RuntimeError):
         ask.ask_claude("x")
+
+
+def test_compose_email_has_subject_and_all_qa():
+    subject, body = ask.compose_email(
+        [("今天天氣", "多雲"), ("Q2", "A2")], "2026-06-20")
+    assert "2026-06-20" in subject
+    assert "今天天氣" in body and "多雲" in body
+    assert "Q2" in body and "A2" in body
+
+
+def test_write_log_creates_file_with_content(tmp_path):
+    p = ask.write_log(tmp_path, "2026-06-20", [("今天天氣", "多雲")])
+    assert p == tmp_path / "2026-06-20.md"
+    text = p.read_text(encoding="utf-8")
+    assert "2026-06-20" in text
+    assert "今天天氣" in text and "多雲" in text

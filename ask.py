@@ -31,6 +31,24 @@ def with_retries(fn, attempts: int = 3, delay: float = 5.0):
     raise last
 
 
+def compose_email(qa_pairs: list[tuple[str, str]], date_str: str) -> tuple[str, str]:
+    subject = f"每日 Claude 問答 {date_str}"
+    blocks = [f"Q: {q}\n\n{a}" for q, a in qa_pairs]
+    body = f"{date_str} 每日 Claude 問答\n\n" + "\n\n---\n\n".join(blocks) + "\n"
+    return subject, body
+
+
+def write_log(log_dir: Path, date_str: str,
+              qa_pairs: list[tuple[str, str]]) -> Path:
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    path = log_dir / f"{date_str}.md"
+    blocks = [f"## Q: {q}\n\n{a}" for q, a in qa_pairs]
+    text = f"# {date_str} 每日 Claude 問答\n\n" + "\n\n".join(blocks) + "\n"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
 def ask_claude(question: str, claude_bin: str = "claude",
                model: str = "sonnet", timeout: int = 180) -> str:
     proc = subprocess.run(
