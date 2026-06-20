@@ -1,6 +1,10 @@
 # 05_每日定時問Claude — 專案索引（關鍵字檢索用）
 
-> 一句話：**GitHub Actions 雲端每天台灣時間 06:00 用 `claude -p` 問固定問題 → 取得答案（可查即時資訊）→ 寄到 Gmail + commit 記錄**，電腦關機也照跑。
+> 一句話：**GitHub Actions 雲端每天台灣時間 05:30 用 `claude -p` 問固定問題 → 取得答案（可查即時資訊）→ 寄到 Gmail + commit 記錄**，電腦關機也照跑。
+
+> 🎯 **真正目的（最重要）**：用清晨的自動提問「**啟動 Claude Code 的 5 小時用量視窗**」。視窗自首次使用起算 +5 小時 reset；目前設 **05:30 啟動 → 約 10:30 reset → 15:30 reset → 20:30**，讓三段用量配額涵蓋工作時段。天氣問題只是「按下計時器」的載體；寄信只是順便留個證明。
+> - 之所以行得通：本專案用的 `CLAUDE_CODE_OAUTH_TOKEN` 就是訂閱本人授權，這通會算進**同一個 5 小時配額池**。
+> - 注意：視窗以「訊息實際送達」起算；GitHub 免費 cron 尖峰可能延遲數分鐘，reset 點會跟著順移。想讓 reset 落在不同時間就調整 cron 起算點（起算點 +5 小時 = reset）。
 
 ---
 
@@ -37,7 +41,7 @@
 ## 🏗️ 架構（資料流）
 
 ```
-GitHub Actions（schedule: cron 0 22 / 10 22 UTC = 台灣 06:00 / 06:10；另有 workflow_dispatch 手動鈕）
+GitHub Actions（schedule: cron 30 21 / 40 21 UTC = 台灣 05:30 / 05:40；另有 workflow_dispatch 手動鈕）
   └─ ubuntu-latest：checkout → 裝 Node → 裝 @anthropic-ai/claude-code → 裝 Python
        └─ python ask.py
             ├─ 1. today_tw()         台灣(UTC+8)今天日期
@@ -139,7 +143,7 @@ GitHub Actions（schedule: cron 0 22 / 10 22 UTC = 台灣 06:00 / 06:10；另有
 - **550 NoSuchUser（退信）**：`MAIL_TO` 被 PowerShell 管道塞了 BOM 隱形字元。修法：`gh secret set MAIL_TO --body "..."`，程式 `_clean()` 另做雙保險。
 - **防重複的副作用**：手動觸發測試會產生「當天」的 log，於是當天 06:00 排程會判定「已寄」而跳過。想連當天也收，刪掉 `log\<當天>.md` 再 push。
 - **claude -p 失敗常見**：未登入、PATH 上有失效的 `ANTHROPIC_API_KEY`（蓋掉 OAuth）、訂閱限流、斷網。
-- **時間換算**：GitHub cron 走 UTC；台灣時間要 −8 換成 UTC（06:00 → `0 22`）。
+- **時間換算**：GitHub cron 走 UTC；台灣時間要 −8 換成 UTC（05:30 → `30 21`）。**reset 時間 = 啟動時間 + 5 小時**，要移 reset 就移 cron 起算點。
 
 ---
 

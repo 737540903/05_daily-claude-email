@@ -2,8 +2,8 @@ name: daily-ask
 
 on:
   schedule:
-    - cron: "0 22 * * *"   # 台灣 06:00
-    - cron: "10 22 * * *"  # 台灣 06:10 補觸發
+    - cron: "30 21 * * *"  # 台灣 05:30
+    - cron: "40 21 * * *"  # 台灣 05:40 補觸發
   workflow_dispatch: {}
 
 concurrency:
