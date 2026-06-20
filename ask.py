@@ -10,3 +10,8 @@ def today_tw() -> str:
 
 def already_sent(log_dir: Path, date_str: str) -> bool:
     return (Path(log_dir) / f"{date_str}.md").exists()
+
+
+def read_questions(path: Path) -> list[str]:
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    return [s.strip() for s in lines if s.strip()]
