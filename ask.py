@@ -106,9 +106,10 @@ def main() -> int:
                 for q in questions]
 
     subject, body = compose_email(qa_pairs, date_str)
-    smtp_user = os.environ["GMAIL_ADDRESS"]
-    smtp_password = os.environ["GMAIL_APP_PASSWORD"]
-    mail_to = os.environ.get("MAIL_TO", smtp_user)
+    smtp_user = os.environ["GMAIL_ADDRESS"].strip()
+    # Gmail 應用程式密碼常以 4 組 4 碼顯示（含空白），SMTP 需去除空白
+    smtp_password = os.environ["GMAIL_APP_PASSWORD"].replace(" ", "").strip()
+    mail_to = os.environ.get("MAIL_TO", smtp_user).strip()
     with_retries(lambda: send_email(subject, body, smtp_user, smtp_password, mail_to))
 
     write_log(log_dir, date_str, qa_pairs)
