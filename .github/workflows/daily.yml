@@ -2,8 +2,7 @@ name: daily-ask
 
 on:
   schedule:
-    - cron: "30 21 * * *"  # 台灣 05:30
-    - cron: "40 21 * * *"  # 台灣 05:40 補觸發
+    - cron: "15 1 * * *"   # 台灣 09:15（臨時測試，確認後改回 05:30）
   workflow_dispatch: {}
 
 concurrency:
@@ -36,6 +35,7 @@ jobs:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
+          FORCE_SEND: "1"   # 臨時：跳過防重複以驗證排程確實會寄；確認後移除
         run: python ask.py
 
       - name: Commit log

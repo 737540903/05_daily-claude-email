@@ -101,7 +101,8 @@ def main() -> int:
         os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = _clean(tok)
 
     date_str = today_tw()
-    if already_sent(log_dir, date_str):
+    # FORCE_SEND=1 可臨時跳過防重複（測試用）；未設時維持正常防重複
+    if already_sent(log_dir, date_str) and not os.environ.get("FORCE_SEND"):
         print(f"[skip] {date_str} 已寄過，跳過")
         return 0
 
